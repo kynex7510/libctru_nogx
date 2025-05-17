@@ -118,6 +118,12 @@ void gspExit(void);
  */
 Handle *gspGetSessionHandle(void);
 
+/**
+ * @brief Gets a pointer to the shared memory used by GSP.
+ * @return A pointer to the shared memory used by GSP.
+ */
+void* gspGetSharedMem(void);
+
 /// Returns true if the application currently has GPU rights.
 bool gspHasGpuRight(void);
 
@@ -187,12 +193,6 @@ GSPGPU_Event gspWaitForAnyEvent(void);
 
 /// Waits for DMA.
 #define gspWaitForDMA() gspWaitForEvent(GSPGPU_EVENT_DMA, false)
-
-/**
- * @brief Submits a GX command.
- * @param gxCommand GX command to execute.
- */
-Result gspSubmitGxCommand(const u32 gxCommand[0x8]);
 
 /**
  * @brief Acquires GPU rights.

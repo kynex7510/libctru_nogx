@@ -237,6 +237,11 @@ bool gspHasGpuRight(void)
 	return gspGpuRight;
 }
 
+void* gspGetSharedMem(void)
+{
+	return gspSharedMem;
+}
+
 bool gspPresentBuffer(unsigned screen, unsigned swap, const void* fb_a, const void* fb_b, u32 stride, u32 mode)
 {
 	GSPGPU_FramebufferInfo info;
@@ -356,11 +361,6 @@ static int popInterrupt(void)
 	return curEvt;
 }
 
-// Dummy version to avoid linking in gxqueue.c if not actually used
-__attribute__((weak)) void gxCmdQueueInterrupt(GSPGPU_Event irq)
-{
-}
-
 void gspEventThreadMain(void *arg)
 {
 	while (gspRunEvents)
@@ -380,7 +380,6 @@ void gspEventThreadMain(void *arg)
 
 			if (curEvt < GSPGPU_EVENT_MAX)
 			{
-				gxCmdQueueInterrupt((GSPGPU_Event)curEvt);
 				if (gspEventCb[curEvt])
 				{
 					ThreadFunc func = gspEventCb[curEvt];
@@ -396,40 +395,6 @@ void gspEventThreadMain(void *arg)
 			}
 		}
 	}
-}
-
-//essentially : get commandIndex and totalCommands, calculate offset of new command, copy command and update totalCommands
-//use LDREX/STREX because this data may also be accessed by the GSP module and we don't want to break stuff
-//(mostly, we could overwrite the buffer header with wrong data and make the GSP module reexecute old commands)
-Result gspSubmitGxCommand(const u32 gxCommand[0x8])
-{
-	u32* sharedGspCmdBuf = (u32*)((u8*)gspSharedMem + 0x800 + gspThreadId*0x200);
-	u32 cmdBufHeader = __ldrex((s32*)sharedGspCmdBuf);
-
-	u8 commandIndex=cmdBufHeader&0xFF;
-	u8 totalCommands=(cmdBufHeader>>8)&0xFF;
-
-	if(totalCommands>=15)return -2;
-
-	u8 nextCmd=(commandIndex+totalCommands)%15; //there are 15 command slots
-	u32* dst=&sharedGspCmdBuf[8*(1+nextCmd)];
-	memcpy(dst, gxCommand, 0x20);
-
-	__dsb();
-	totalCommands++;
-	cmdBufHeader=((cmdBufHeader)&0xFFFF00FF)|(((u32)totalCommands)<<8);
-
-	while(1)
-	{
-		if (!__strex((s32*)sharedGspCmdBuf, cmdBufHeader)) break;
-
-		cmdBufHeader = __ldrex((s32*)sharedGspCmdBuf);
-		totalCommands=((cmdBufHeader&0xFF00)>>8)+1;
-		cmdBufHeader=((cmdBufHeader)&0xFFFF00FF)|((totalCommands<<8)&0xFF00);
-	}
-
-	if(totalCommands==1)return GSPGPU_TriggerCmdReqQueue();
-	return 0;
 }
 
 Result GSPGPU_WriteHWRegs(u32 regAddr, const u32* data, u8 size)
