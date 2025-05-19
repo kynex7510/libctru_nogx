@@ -242,6 +242,11 @@ void* gspGetSharedMem(void)
 	return gspSharedMem;
 }
 
+u8 gspGetClientId(void)
+{
+	return gspThreadId;
+}
+
 bool gspPresentBuffer(unsigned screen, unsigned swap, const void* fb_a, const void* fb_b, u32 stride, u32 mode)
 {
 	GSPGPU_FramebufferInfo info;
@@ -322,6 +327,13 @@ GSPGPU_Event gspWaitForAnyEvent(void)
 			syncArbitrateAddress(&gspLastEvent, ARBITRATION_WAIT_IF_LESS_THAN, 0);
 	} while (x < 0);
 	return (GSPGPU_Event)x;
+}
+
+void gspClearEvent(GSPGPU_Event id) {
+	if (id >= GSPGPU_EVENT_MAX)
+		return;
+
+	LightEvent_Clear(&gspEvents[id]);
 }
 
 static int popInterrupt(void)

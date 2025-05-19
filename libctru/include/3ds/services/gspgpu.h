@@ -124,6 +124,9 @@ Handle *gspGetSessionHandle(void);
  */
 void* gspGetSharedMem(void);
 
+/// Returns the client ID.
+u8 gspGetClientId(void);
+
 /// Returns true if the application currently has GPU rights.
 bool gspHasGpuRight(void);
 
@@ -169,6 +172,12 @@ void gspWaitForEvent(GSPGPU_Event id, bool nextEvent);
  * The function returns immediately if there are unprocessed events at the time of call.
  */
 GSPGPU_Event gspWaitForAnyEvent(void);
+
+/**
+ * @brief Clear a GSPGPU event.
+ * @param id ID of the event.
+ */
+void gspClearEvent(GSPGPU_Event id);
 
 /// Waits for PSC0
 #define gspWaitForPSC0() gspWaitForEvent(GSPGPU_EVENT_PSC0, false)
